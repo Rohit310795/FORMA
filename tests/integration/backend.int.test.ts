@@ -313,7 +313,7 @@ describe('user management and privacy', () => {
     await db.doc(`users/${other.uid}/hydrationLogs/h9`).set({ id: 'h9', ml: 999 });
     const out = await call(exportMyData, user, {});
     expect(out.hydrationLogs).toEqual([{ id: 'h1', ml: 250 }]);
-    expect(JSON.stringify(out)).not.toContain('999');
+    expect(JSON.stringify(out)).not.toContain('"h9"');
   });
 
   it('self-deletion requires a recent sign-in and removes everything', async () => {

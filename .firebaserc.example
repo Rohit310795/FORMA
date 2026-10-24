@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "forma-dev",
+    "dev": "forma-dev",
+    "staging": "forma-staging",
+    "prod": "forma-prod"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "forma",
+  "private": true,
+  "version": "0.1.0",
+  "description": "FORMA — AI-powered fitness and wellness app with a secure admin console",
+  "workspaces": [
+    "apps/mobile",
+    "apps/admin",
+    "packages/*",
+    "functions"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "vitest run",
+    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-forma \"vitest run --config vitest.rules.config.mts\"",
+    "test:integration": "firebase emulators:exec --only auth,firestore --project demo-forma \"vitest run --config vitest.integration.config.mts\"",
+    "build:functions": "npm run build -w functions",
+    "build:admin": "npm run build -w apps/admin",
+    "build:mobile:web": "npm run export:web -w apps/mobile",
+    "emulators": "npm run build:functions && firebase emulators:start --project demo-forma --import=.emulator-data --export-on-exit=.emulator-data",
+    "check": "npm run typecheck && npm run lint && npm test"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase-tools": "^15.34.1",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
+  }
+}

@@ -54,10 +54,14 @@ jobs:
         if: env.HAS_SERVICE_ACCOUNT == 'true'
         run: |
           set -euo pipefail
-          APP_ID=$(npx firebase apps:list WEB --project "$PROJECT_ID" --json | jq -r '.result[0].appId // empty')
+          # Show Firebase's real error message if a command fails.
+          fb() { npx firebase "$@" > "$RUNNER_TEMP/fb.out" 2> "$RUNNER_TEMP/fb.err" || { cat "$RUNNER_TEMP/fb.out" "$RUNNER_TEMP/fb.err" >&2; echo "::error::firebase $1 failed (see message above)"; exit 1; }; }
+          fb apps:list WEB --project "$PROJECT_ID" --json
+          APP_ID=$(jq -r '.result[0].appId // empty' "$RUNNER_TEMP/fb.out")
           if [ -z "$APP_ID" ]; then
             echo "No Web app registered yet; creating one (free)."
-            APP_ID=$(npx firebase apps:create WEB "FORMA Web" --project "$PROJECT_ID" --json | jq -r '.result.appId')
+            fb apps:create WEB "FORMA Web" --project "$PROJECT_ID" --json
+            APP_ID=$(jq -r '.result.appId' "$RUNNER_TEMP/fb.out")
           fi
           npx firebase apps:sdkconfig WEB "$APP_ID" --project "$PROJECT_ID" -o "$RUNNER_TEMP/webconfig.json" --non-interactive
           CONFIG=$(jq -c . "$RUNNER_TEMP/webconfig.json")

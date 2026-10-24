@@ -1,0 +1,31 @@
+name: CI
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - name: Typecheck, lint, unit tests
+        run: npm run check
+      - name: Firestore & Storage rules tests (emulator)
+        run: npm run test:rules
+      - name: Backend integration tests (emulator)
+        run: npm run test:integration
+      - name: Build functions, admin console and mobile web bundle
+        run: |
+          npm run build:functions
+          npm run build:admin
+          npm run build:mobile:web

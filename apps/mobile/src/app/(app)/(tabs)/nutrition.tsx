@@ -25,14 +25,13 @@ import { Text } from '@/components/ui/Text';
 import { Card } from '@/components/ui/Card';
 import { Button, IconButton } from '@/components/ui/Button';
 import { NumberField, Segmented, ListRow } from '@/components/ui/Controls';
-import { Banner, SectionHeader } from '@/components/ui/Feedback';
+import { Banner } from '@/components/ui/Feedback';
 import { BarChart, MacroBar, ProgressRing } from '@/components/charts/Charts';
 import { MealLogger } from '@/components/MealLogger';
 
 export default function Nutrition() {
   const { c } = useTheme();
   const today = useToday();
-  const { profile } = useProfile();
   const { data: targets } = useTargets();
   const { items: entries } = useCollection<NutritionEntry>('nutritionLogs', { orderBy: 'dayKey', limit: 300 });
   const { items: water } = useCollection<HydrationLog>('hydrationLogs', { orderBy: 'dayKey', limit: 50 });

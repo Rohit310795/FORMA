@@ -52,17 +52,19 @@ export default function Coach() {
   const feature = useFeature('aiCoach');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [cid, setCid] = useState<string>();
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const [loadedMessages, setLoadedMessages] = useState<{ cid: string; items: Msg[] }>();
+  const messages = cid && loadedMessages?.cid === cid ? loadedMessages.items : [];
   const [optimistic, setOptimistic] = useState<Msg[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [showHistory, setShowHistory] = useState(false);
   const consented = (profile?.consent?.aiContext ?? []) as AiContextCategory[];
-  const [share, setShare] = useState<AiContextCategory[]>(consented);
+  // Per-request narrowing of what's shared; defaults to the stored consent.
+  const [shareOverride, setShareOverride] = useState<AiContextCategory[]>();
+  const share = (shareOverride ?? consented).filter((k) => consented.includes(k));
+  const setShare = (fn: (s: AiContextCategory[]) => AiContextCategory[]) => setShareOverride(fn(share));
   const list = useRef<FlatList<Msg>>(null);
-
-  useEffect(() => setShare(consented), [consented.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(
     () =>
@@ -72,9 +74,9 @@ export default function Coach() {
     [uid],
   );
   useEffect(() => {
-    if (!cid) return setMessages([]);
+    if (!cid) return;
     return onSnapshot(query(collection(db, `users/${uid}/aiConversations/${cid}/messages`), orderBy('createdAt'), limit(200)), (snap) => {
-      setMessages(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Msg, 'id'>) })));
+      setLoadedMessages({ cid, items: snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Msg, 'id'>) })) });
       setOptimistic([]);
     }, () => undefined);
   }, [uid, cid]);

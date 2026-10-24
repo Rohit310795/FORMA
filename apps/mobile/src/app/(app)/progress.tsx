@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { router } from 'expo-router';
 import {
   EXERCISE_MAP,
@@ -41,13 +41,13 @@ export default function Progress() {
   const [summary, setSummary] = useState<{ text: string; disclaimers: string[] }>();
   const [busy, setBusy] = useState(false);
   const completed = sessions.filter((s) => s.status === 'completed');
-  const cons = useMemo(() => consistency(sessions, today, 8), [sessions, today]);
+  const cons = consistency(sessions, today, 8);
   const weeklyVolume = cons.weeks.map((w) => ({ x: w.weekStart.slice(5), y: Math.round(completed.filter((s) => weekStart(s.dayKey) === w.weekStart).reduce((a, s) => a + sessionVolumeKg(s), 0)) }));
-  const prs = useMemo(() => personalRecords(sessions), [sessions]);
+  const prs = personalRecords(sessions);
   const loggedExercises = [...prs.keys()];
   const [exercise, setExercise] = useState<string>();
   const ex = exercise ?? loggedExercises[0];
-  const e1rmSeries = useMemo(() => {
+  const e1rmSeries = (() => {
     if (!ex) return [];
     return completed
       .slice()
@@ -57,7 +57,7 @@ export default function Progress() {
         return { x: s.dayKey, y: best };
       })
       .filter((p) => p.y > 0);
-  }, [completed, ex]);
+  })();
 
   const days28 = lastNDays(today, 28);
   const kcalByDay = new Map<string, number>();

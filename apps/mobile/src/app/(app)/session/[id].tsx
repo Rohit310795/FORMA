@@ -36,30 +36,33 @@ export default function LiveSession() {
   const { c } = useTheme();
   const units = profile?.units ?? 'metric';
   const stored = items.find((s) => s.id === id);
-  const [session, setSession] = useState<WorkoutSession>();
+  // Local copy takes over from the stored session as soon as the user edits it.
+  const [local, setSession] = useState<WorkoutSession>();
+  const session = local ?? stored;
   const [index, setIndex] = useState(0);
   const [restEndsAt, setRestEndsAt] = useState<number>();
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  const restRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    restRef.current = restEndsAt;
+  }, [restEndsAt]);
   const [picker, setPicker] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [discomfortOpen, setDiscomfortOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
-    if (stored && !session) setSession(stored);
-  }, [stored, session]);
-
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
+    const t = setInterval(() => {
+      const ts = Date.now();
+      setNow(ts);
+      if (restRef.current && ts >= restRef.current) {
+        restRef.current = undefined;
+        setRestEndsAt(undefined);
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+      }
+    }, 1000);
     return () => clearInterval(t);
   }, []);
-
-  useEffect(() => {
-    if (restEndsAt && now >= restEndsAt) {
-      setRestEndsAt(undefined);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-    }
-  }, [now, restEndsAt]);
 
   // Every change is persisted locally and queued for sync (debounced).
   const commit = useCallback(

@@ -10,7 +10,7 @@
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit",
-    "bootstrap-owner": "node --experimental-strip-types scripts/bootstrap-owner.ts"
+    "bootstrap-owner": "node --experimental-strip-types scripts/bootstrap-owner.mts"
   },
   "dependencies": {
     "@google-cloud/secret-manager": "^7.2.0",

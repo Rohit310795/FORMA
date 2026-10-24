@@ -23,28 +23,37 @@ export default function MobilityRoutine() {
   const { c } = useTheme();
   const [step, setStep] = useState(-1);
   const [left, setLeft] = useState(0);
-  const [startedAt] = useState(Date.now());
+  const [startedAt, setStartedAt] = useState<number>();
   const [discomfort, setDiscomfort] = useState(0);
   const [done, setDone] = useState(false);
   const current = r && step >= 0 ? r.steps[step] : undefined;
   const duration = current?.durationSec ? current.durationSec * (current.perSide ? 2 : 1) : 0;
 
   useEffect(() => {
-    if (!current?.durationSec) return;
-    setLeft(duration);
-    const t = setInterval(() => setLeft((x) => (x > 0 ? x - 1 : 0)), 1000);
+    if (!duration) return;
+    const t = setInterval(
+      () =>
+        setLeft((x) => {
+          if (x === 1) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+          return x > 0 ? x - 1 : 0;
+        }),
+      1000,
+    );
     return () => clearInterval(t);
-  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [step, duration]);
 
-  useEffect(() => {
-    if (current?.durationSec && left === 0 && step >= 0) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-  }, [left]); // eslint-disable-line react-hooks/exhaustive-deps
+  const goTo = (next: number) => {
+    if (next === 0) setStartedAt(new Date().getTime());
+    const s = r?.steps[next];
+    setLeft(s?.durationSec ? s.durationSec * (s.perSide ? 2 : 1) : 0);
+    setStep(next);
+  };
 
   if (!r) return <Screen title="Routine" back><Banner tone="warning">Routine not found.</Banner></Screen>;
 
   const finish = async () => {
     const sid = newId();
-    await save('mobilitySessions', sid, { id: sid, dayKey: today, routineId: r.id, completedSteps: Math.max(0, step + 1), totalSteps: r.steps.length, durationMin: Math.round((Date.now() - startedAt) / 60000), discomfort, createdAt: nowIso(), updatedAt: nowIso(), revision: 0, source: 'manual' });
+    await save('mobilitySessions', sid, { id: sid, dayKey: today, routineId: r.id, completedSteps: Math.max(0, step + 1), totalSteps: r.steps.length, durationMin: startedAt ? Math.round((new Date().getTime() - startedAt) / 60000) : undefined, discomfort, createdAt: nowIso(), updatedAt: nowIso(), revision: 0, source: 'manual' });
     setDone(true);
   };
 
@@ -67,7 +76,7 @@ export default function MobilityRoutine() {
             </Card>
           ))}
           <Banner tone="info">Move within a comfortable range. Mild stretch is fine; stop if you feel sharp pain, numbness or tingling.</Banner>
-          <Button label="Start routine" icon="play" onPress={() => setStep(0)} />
+          <Button label="Start routine" icon="play" onPress={() => goTo(0)} />
         </>
       ) : current ? (
         <>
@@ -82,8 +91,8 @@ export default function MobilityRoutine() {
             <Text tone="muted" style={{ textAlign: 'center' }}>{current.cue}</Text>
           </Card>
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Button label="Back" variant="secondary" disabled={step === 0} onPress={() => setStep((s) => s - 1)} style={{ flex: 1 }} />
-            {step < r.steps.length - 1 ? <Button label="Next" onPress={() => setStep((s) => s + 1)} style={{ flex: 2 }} /> : <Button label="Finish" onPress={() => setStep(r.steps.length)} style={{ flex: 2 }} />}
+            <Button label="Back" variant="secondary" disabled={step === 0} onPress={() => goTo(step - 1)} style={{ flex: 1 }} />
+            {step < r.steps.length - 1 ? <Button label="Next" onPress={() => goTo(step + 1)} style={{ flex: 2 }} /> : <Button label="Finish" onPress={() => goTo(r.steps.length)} style={{ flex: 2 }} />}
           </View>
         </>
       ) : (

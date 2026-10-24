@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { View } from 'react-native';
 import { confirm } from '@/lib/confirm';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -24,21 +24,16 @@ export default function PlanEditor() {
   const { save } = useMutations();
   const { c } = useTheme();
   const original = items.find((p) => p.id === id);
-  const [plan, setPlan] = useState<WorkoutPlan>();
-  const [dirty, setDirty] = useState(false);
+  // Local edits overlay the stored plan until saved.
+  const [draft, setDraft] = useState<WorkoutPlan>();
+  const plan = draft ?? original;
+  const dirty = draft !== undefined;
   const [picker, setPicker] = useState<{ dayKey: string; replaceKey?: string }>();
   const [error, setError] = useState<string>();
 
-  useEffect(() => {
-    if (original && !dirty) setPlan(original);
-  }, [original, dirty]);
-
   if (!plan) return <Screen title="Plan" back>{loading ? <Loading /> : <Banner tone="warning">Plan not found.</Banner>}</Screen>;
 
-  const update = (fn: (p: WorkoutPlan) => WorkoutPlan) => {
-    setPlan((p) => (p ? fn(p) : p));
-    setDirty(true);
-  };
+  const update = (fn: (p: WorkoutPlan) => WorkoutPlan) => setDraft((d) => fn(d ?? plan));
   const updateDay = (key: string, fn: (d: PlanDay) => PlanDay) => update((p) => ({ ...p, days: p.days.map((d) => (d.key === key ? fn(d) : d)) }));
   const updateEx = (dayKey: string, exKey: string, patch: Partial<PlannedExercise>) => updateDay(dayKey, (d) => ({ ...d, exercises: d.exercises.map((e) => (e.key === exKey ? { ...e, ...patch } : e)) }));
   const move = (dayKey: string, index: number, dir: -1 | 1) =>
@@ -57,7 +52,7 @@ export default function PlanEditor() {
     const parsed = workoutPlanSchema.safeParse(next);
     if (!parsed.success) return setError(parsed.error.issues[0]?.message ?? 'Please check the plan.');
     await save('workoutPlans', plan.id, parsed.data);
-    setDirty(false);
+    setDraft(undefined);
     router.back();
   };
 

@@ -24,7 +24,9 @@
     "emulators": "npm run build:functions && firebase emulators:start --project demo-forma --import=.emulator-data --export-on-exit=.emulator-data",
     "check": "npm run typecheck && npm run lint && npm test",
     "test:e2e:mobile": "node tests/e2e/mobile.e2e.mjs",
-    "serve:mobile:web": "node tests/e2e/serve.mjs apps/mobile/dist 8081"
+    "serve:mobile:web": "node tests/e2e/serve.mjs apps/mobile/dist 8081",
+    "test:e2e:admin": "node tests/e2e/admin.e2e.mjs",
+    "serve:admin": "node tests/e2e/serve.mjs apps/admin/out 8082"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^6.0.0",

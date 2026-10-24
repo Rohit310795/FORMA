@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 import { EXERCISES, SPLIT_TEMPLATES, buildPlanFromTemplate, filterExercises, type ClinicianInstruction, type DiscomfortLog, type WorkoutPlan } from '@forma/shared';
 import { useProfile } from '@/lib/profile';
-import { useCollection, useMutations } from '@/lib/data';
+import { useCollection, useMutations, useUserDoc } from '@/lib/data';
 import { useFeature } from '@/lib/config';
 import { api, apiErrorMessage } from '@/lib/api';
 import { newId, nowIso } from '@/lib/ids';
@@ -21,6 +21,7 @@ export default function NewPlan() {
   const { plans } = useActivePlan();
   const { items: discomfort } = useCollection<DiscomfortLog>('discomfortLogs', { orderBy: 'dayKey', limit: 20 });
   const { items: clinician } = useCollection<ClinicianInstruction>('clinicianInstructions');
+  const { data: musclePrefs } = useUserDoc<{ priorities: Record<string, 'priority' | 'maintain' | 'reduce'> }>('settings', 'musclePriorities');
   const { save } = useMutations();
   const aiDraft = useFeature('workoutGeneration');
   const [request, setRequest] = useState('');
@@ -28,6 +29,13 @@ export default function NewPlan() {
   const [message, setMessage] = useState<{ tone: 'info' | 'warning'; text: string }>();
 
   const filter = filterExercises(EXERCISES, { today, discomfortLogs: discomfort, clinicianInstructions: clinician, avoidedExerciseIds: profile?.avoidedExerciseIds });
+
+  // Muscle priorities from My Muscles: favour exercises that hit "priority" muscles
+  // and don't primarily target "reduce" muscles. Never overrides safety filtering.
+  const priorities = musclePrefs?.priorities ?? {};
+  const priorityExerciseIds = filter.allowed
+    .filter((e) => e.primaryMuscles.some((m) => priorities[m] === 'priority') && !e.primaryMuscles.some((m) => priorities[m] === 'reduce'))
+    .map((e) => e.id);
 
   const activate = async (plan: WorkoutPlan) => {
     // Only one active plan; older ones are kept (never deleted) so history stays linked.
@@ -45,7 +53,7 @@ export default function NewPlan() {
       sessionMinutes: profile?.sessionMinutes ?? 45,
       trainingDays: profile?.trainingDays,
       allowed: filter.allowed,
-      preferredExerciseIds: profile?.preferredExerciseIds,
+      preferredExerciseIds: [...(profile?.preferredExerciseIds ?? []), ...priorityExerciseIds],
       now: nowIso(),
       id: newId(),
     });

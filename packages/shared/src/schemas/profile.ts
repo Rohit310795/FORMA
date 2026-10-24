@@ -131,5 +131,7 @@ export const goalRecordSchema = z.object({
   status: z.enum(['active', 'achieved', 'archived']).default('active'),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
+  revision: z.number().int().min(0).default(0),
+  source: z.enum(['manual', 'healthkit', 'ai_draft', 'template', 'import']).default('manual'),
 });
 export type GoalRecord = z.infer<typeof goalRecordSchema>;

@@ -53,7 +53,7 @@ service cloud.firestore {
       match /settings/{docId} {
         allow read: if isUser(uid);
         allow write: if isUser(uid)
-          && docId in ['healthSync', 'notifications', 'nutritionTargets']
+          && docId in ['healthSync', 'notifications', 'nutritionTargets', 'musclePriorities']
           && data().keys().size() <= 40;
       }
 

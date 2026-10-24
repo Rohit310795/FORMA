@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { AI_CONTEXT_CATEGORIES, AI_ROUTE_KEYS } from '../features';
 
 export const chatRequestSchema = z.object({
-  conversationId: z.string().regex(/^[A-Za-z0-9_-]{6,64}$/).optional(),
+  conversationId: z.string().regex(/^[A-Za-z0-9_-]{6,64}$/).nullish(),
   routeKey: z.enum(AI_ROUTE_KEYS).default('coachChat'),
   message: z.string().trim().min(1).max(4000),
   /** Categories the user allows for THIS request (still capped by stored consent). */

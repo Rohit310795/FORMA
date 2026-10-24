@@ -2,6 +2,9 @@
 
 _Last updated: 2026-10-24._
 
+## Deployment mode: free (Spark)
+The published build runs on Firebase's **free Spark plan** (docs/DEPLOY_FREE.md). It deploys only Firestore rules and Hosting (app at `/`, admin notice at `/admin`) through `.github/workflows/deploy.yml`. In this mode AI features, the admin console, server feature flags and photo storage are off. Data export and account deletion run on the device (verified by a free-mode E2E run with no Cloud Functions: 15/15 steps). Everything else in this document describes the full (Blaze) version, which needs no code changes to enable.
+
 ## Summary
 The mobile app, the admin console and the trusted backend are implemented and verified end-to-end against the Firebase Emulator Suite. What remains is mostly **external setup** (a real Firebase project, AI provider keys, Apple/Google developer configuration, device builds) plus a short list of follow-ups below.
 
@@ -12,10 +15,11 @@ The mobile app, the admin console and the trusted backend are implemented and ve
 | Typecheck (shared, functions, mobile, admin) | ✅ clean |
 | ESLint (mobile with React Compiler rules, admin with Next rules) | ✅ clean |
 | Unit tests — `npm test` | ✅ **99 passed** (shared 66 · functions 28 · mobile 5) |
-| Security Rules — `npm run test:rules` (Firestore + Storage emulators) | ✅ **23 passed** |
+| Security Rules — `npm run test:rules` (Firestore + Storage emulators) | ✅ **24 passed** |
 | Backend integration — `npm run test:integration` (Auth + Firestore emulators) | ✅ **22 passed** |
 | Mobile E2E — Playwright on the web build vs. Auth/Firestore/Functions/Storage emulators | ✅ **16 / 16 steps** |
 | Admin E2E — Playwright on the static console vs. emulators | ✅ **10 / 10 steps** |
+| Free-mode mobile E2E — combined Hosting build vs. Auth + Firestore only (no Functions) | ✅ **15 / 15 steps** |
 | Builds: functions bundle, admin static export, mobile web export | ✅ |
 
 Not executed (need external resources): HealthKit and other native modules on a real iPhone, real AI provider calls, Google/Apple OAuth, deployment to a real Firebase project.

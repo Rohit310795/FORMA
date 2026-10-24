@@ -102,6 +102,19 @@ describe('server-managed data', () => {
   });
 });
 
+describe('self-service deletion (free setup)', () => {
+  it('owners can delete their profile and settings; others cannot', async () => {
+    const alice = env.authenticatedContext('alice').firestore();
+    await setDoc(doc(alice, 'users/alice/profile/main'), profile());
+    await setDoc(doc(alice, 'users/alice/settings/nutritionTargets'), { kcal: 2000 });
+    const bob = env.authenticatedContext('bob').firestore();
+    await assertFails(deleteDoc(doc(bob, 'users/alice/profile/main')));
+    await assertFails(deleteDoc(doc(bob, 'users/alice/settings/nutritionTargets')));
+    await assertSucceeds(deleteDoc(doc(alice, 'users/alice/settings/nutritionTargets')));
+    await assertSucceeds(deleteDoc(doc(alice, 'users/alice/profile/main')));
+  });
+});
+
 describe('health-detail consent', () => {
   it('discomfort logs and clinician instructions need explicit consent', async () => {
     const alice = env.authenticatedContext('alice').firestore();

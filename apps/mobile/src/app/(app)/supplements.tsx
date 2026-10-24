@@ -16,6 +16,7 @@ import { confirm } from '@/lib/confirm';
 
 export default function Supplements() {
   const feature = useFeature('supplements');
+  const ai = useFeature('aiCoach');
   const today = useToday();
   const { items } = useCollection<SupplementItem>('supplementInventory');
   const { save, remove } = useMutations();
@@ -108,12 +109,12 @@ export default function Supplements() {
               ) : null}
             </Card>
           ))}
-          <Card variant="hero" style={{ gap: 8 }}>
+          {ai.enabled ? <Card variant="hero" style={{ gap: 8 }}>
             <Text variant="heading">Ask about a supplement</Text>
             <Field label="Question" placeholder="e.g. Is creatine safe to take long term?" value={question} onChangeText={setQuestion} />
             <Button label="Ask" icon="sparkles" size="sm" disabled={!question.trim()} onPress={ask} loading={busy} />
             {answer ? <Text>{answer}</Text> : null}
-          </Card>
+          </Card> : null}
         </>
       )}
       {tab === 'compare' && (

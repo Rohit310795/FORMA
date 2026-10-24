@@ -25,6 +25,7 @@ import {
 import { useCollection, useData, useMutations, type WithPending } from '@/lib/data';
 import { useProfile } from '@/lib/profile';
 import { storage } from '@/lib/firebase';
+import { env } from '@/lib/env';
 import { confirm } from '@/lib/confirm';
 import { newId, nowIso } from '@/lib/ids';
 import { useToday } from '@/features/hooks';
@@ -222,6 +223,9 @@ function Photos({ uid, photos, today, onDelete }: { uid: string; photos: WithPen
       setBusy(false);
     }
   };
+  if (!env.storageEnabled) {
+    return <Banner tone="info" title="Progress photos aren’t available on this setup">Photo storage needs Cloud Storage, which isn’t enabled for this free setup of FORMA. Everything else in My Body works.</Banner>;
+  }
   return (
     <>
       <Banner tone="info" title="Private by design">Photos are stored in your private space — only you can see them. They are never shared with the AI Coach or administrators.</Banner>

@@ -39,7 +39,7 @@ export default function KneeHealth() {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState<{ text: string; note?: string }>();
   const [busy, setBusy] = useState(false);
-  const ai = useFeature('kneeHealth');
+  const ai = useFeature('aiCoach');
 
   const ask = async () => {
     if (!question.trim()) return;

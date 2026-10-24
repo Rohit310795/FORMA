@@ -25,3 +25,4 @@ android/
 test-results/
 playwright-report/
 *.tsbuildinfo
+hosting/

@@ -45,7 +45,7 @@ In the emulator, AI keys are kept in a dev-only store (`_devSecrets`). Real AI c
 ```bash
 npx firebase login
 cp functions/.env.example functions/.env       # fill in values (no AI keys here)
-npm run build:admin                             # static admin console → apps/admin/out
+npm run build:mobile:web && npm run build:admin && npm run build:hosting   # app at /, console at /admin
 npx firebase deploy --only firestore:rules,firestore:indexes,storage,functions,hosting --project forma-prod
 ```
 

@@ -4,6 +4,9 @@ import { AI_CONTEXT_CATEGORIES, AI_CONTEXT_LABELS, type AiContextCategory } from
 import { useProfile } from '@/lib/profile';
 import { useAuth } from '@/lib/auth';
 import { api, apiErrorMessage } from '@/lib/api';
+import { env } from '@/lib/env';
+import { useData } from '@/lib/data';
+import { deleteOwnAccount, exportOwnData, RecentLoginRequired } from '@/lib/privacy';
 import { confirm, notify } from '@/lib/confirm';
 import { Screen } from '@/components/ui/Screen';
 import { Card } from '@/components/ui/Card';
@@ -14,7 +17,8 @@ import { Banner } from '@/components/ui/Feedback';
 
 export default function Privacy() {
   const { profile, save } = useProfile();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const { uid } = useData();
   const consent = profile?.consent ?? { healthDetails: false, lifeStageContent: false, aiContext: [] as AiContextCategory[], analytics: false };
   const [busy, setBusy] = useState<string>();
   const [confirmText, setConfirmText] = useState('');
@@ -25,7 +29,7 @@ export default function Privacy() {
     setBusy('export');
     setError(undefined);
     try {
-      const data = await api.exportMyData({});
+      const data = env.serverFeatures ? await api.exportMyData({}) : await exportOwnData(uid);
       const json = JSON.stringify(data, null, 2);
       if (Platform.OS === 'web') {
         const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
@@ -50,12 +54,14 @@ export default function Privacy() {
     if (!(await confirm('Delete your account?', 'This permanently deletes your profile, logs, photos and AI conversations. It can’t be undone.', 'Delete forever'))) return;
     setBusy('delete');
     try {
-      await api.deleteMyAccount({ confirm: 'DELETE' });
+      if (env.serverFeatures) await api.deleteMyAccount({ confirm: 'DELETE' });
+      else if (user) await deleteOwnAccount(user);
       notify('Account deleted', 'Your account and data have been deleted.');
       await signOut().catch(() => undefined);
     } catch (e) {
       const reason = (e as { details?: { reason?: string } }).details?.reason;
-      setError(reason === 'recent_login_required' ? 'For your security, sign out and sign back in, then try again within 10 minutes.' : apiErrorMessage(e));
+      const recent = reason === 'recent_login_required' || e instanceof RecentLoginRequired || (e as { code?: string }).code === 'auth/requires-recent-login';
+      setError(recent ? 'For your security, sign out and sign back in, then try again right away.' : apiErrorMessage(e));
     } finally {
       setBusy(undefined);
     }

@@ -7,6 +7,8 @@ const { chromium } = createRequire(import.meta.url)('playwright');
 import assert from 'node:assert/strict';
 
 const BASE = process.env.E2E_BASE ?? 'http://127.0.0.1:8081';
+// E2E_FREE=1: free (Spark) build — no Cloud Functions; AI is off, export/delete run on the device.
+const FREE = process.env.E2E_FREE === '1';
 const email = `e2e${Date.now()}@example.test`;
 const results = [];
 const step = async (name, fn) => {
@@ -73,7 +75,7 @@ try {
     await text('Synced').waitFor({ timeout: 30000 });
   });
 
-  await step('server config loaded (plan from backend)', async () => {
+  await step(FREE ? 'free plan shown in More' : 'server config loaded (plan from backend)', async () => {
     await page.getByRole('tab', { name: /More/ }).or(text('More')).last().click();
     await text('Free plan').waitFor({ timeout: 20000 });
   });
@@ -135,6 +137,13 @@ try {
     await page.screenshot({ path: 'test-results/09-knee-safety.png' });
   });
 
+  if (FREE) {
+    await step('free setup: AI Coach explains it is off, without errors', async () => {
+      await page.goto(`${BASE}/coach`);
+      await text('Taking a short break').waitFor({ timeout: 20000 });
+      await text('free setup').waitFor();
+    });
+  } else {
   await step('AI Coach degrades gracefully when no provider is configured', async () => {
     await page.goto(`${BASE}/coach`);
     await byTest('coach-input').fill('Make me a push day');
@@ -142,12 +151,14 @@ try {
     await text('AI is temporarily unavailable').waitFor({ timeout: 30000 });
   });
 
-  await step('AI Coach red-flag answer comes from the safety engine', async () => {
+    await step('AI Coach red-flag answer comes from the safety engine', async () => {
     await byTest('coach-input').fill('My knee locked and won’t straighten, what should I do?');
     await byTest('coach-send').click();
     await text('Safety first').waitFor({ timeout: 30000 });
     await page.screenshot({ path: 'test-results/10-coach.png' });
   });
+
+  }
 
   await step('session persists across reload', async () => {
     await page.reload();

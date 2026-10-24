@@ -2,7 +2,7 @@
   "name": "forma",
   "private": true,
   "version": "0.1.0",
-  "description": "FORMA — AI-powered fitness and wellness app with a secure admin console",
+  "description": "FORMA \u2014 AI-powered fitness and wellness app with a secure admin console",
   "workspaces": [
     "apps/mobile",
     "apps/admin",
@@ -26,7 +26,9 @@
     "test:e2e:mobile": "node tests/e2e/mobile.e2e.mjs",
     "serve:mobile:web": "node tests/e2e/serve.mjs apps/mobile/dist 8081",
     "test:e2e:admin": "node tests/e2e/admin.e2e.mjs",
-    "serve:admin": "node tests/e2e/serve.mjs apps/admin/out 8082"
+    "serve:admin": "node tests/e2e/serve.mjs apps/admin/out 8082",
+    "build:hosting": "node scripts/build-hosting.mjs",
+    "build:free": "EXPO_PUBLIC_SERVER_FEATURES=off EXPO_PUBLIC_STORAGE_ENABLED=off npm run build:mobile:web && NEXT_PUBLIC_SERVER_FEATURES=off npm run build:admin && npm run build:hosting"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^6.0.0",

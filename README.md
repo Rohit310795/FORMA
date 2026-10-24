@@ -42,12 +42,16 @@ Make yourself an admin locally: see [docs/SETUP.md §1](docs/SETUP.md#1-run-ever
 | `npm run build:admin` | Static export of the admin console |
 | `npm run build:mobile:web` | Web bundle of the mobile app |
 
-## Deploy
+## Publish for free
+
+Follow **[docs/DEPLOY_FREE.md](docs/DEPLOY_FREE.md)**. FORMA runs on Firebase's free Spark plan, published by GitHub Actions. AI and the admin console are off in that setup.
+
+## Deploy (full version, Blaze)
 
 See [docs/SETUP.md](docs/SETUP.md). In short: create a Firebase project (Blaze plan), enable Auth/Firestore/Storage/Secret Manager, fill the `.env` files from the `.env.example` templates, then
 
 ```bash
-npm run build:admin
+npm run build:mobile:web && npm run build:admin && npm run build:hosting
 npx firebase deploy --only firestore:rules,firestore:indexes,storage,functions,hosting --project <your-project>
 ```
 

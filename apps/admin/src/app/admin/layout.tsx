@@ -66,7 +66,31 @@ function Shell({ children }: { children: ReactNode }) {
   );
 }
 
+const SERVER_FEATURES = (process.env.NEXT_PUBLIC_SERVER_FEATURES ?? 'on') !== 'off';
+
+/** Free (Spark) setup: there is no backend to manage, so explain instead of failing. */
+function FreeSetupNotice() {
+  return (
+    <div className="login">
+      <div className="card stack" style={{ maxWidth: 560 }}>
+        <div className="brand" style={{ padding: 0 }}>FORMA<span>ADMIN CONSOLE</span></div>
+        <h1>Not active on the free setup</h1>
+        <p className="muted">
+          This FORMA deployment runs on Firebase’s free Spark plan. The admin console manages AI providers, feature flags,
+          users and budgets through Cloud Functions, which Firebase only offers on the pay-as-you-go Blaze plan.
+        </p>
+        <p className="muted">
+          The app itself is fully usable: sign-in, plans, workout logging, nutrition, recovery, progress, data export and
+          account deletion. AI features are switched off.
+        </p>
+        <p className="subtle">To enable the console later: upgrade the project to Blaze, deploy the functions, and rebuild with <code>NEXT_PUBLIC_SERVER_FEATURES=on</code> (see docs/SETUP.md).</p>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminLayout({ children }: { children: ReactNode }) {
+  if (!SERVER_FEATURES) return <FreeSetupNotice />;
   return (
     <SessionProvider>
       <Shell>{children}</Shell>

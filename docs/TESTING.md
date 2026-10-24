@@ -25,6 +25,8 @@ npm run test:e2e:mobile && npm run test:e2e:admin
 
 Screenshots are written to `test-results/`.
 
+**Free (Spark) mode:** `EXPO_PUBLIC_USE_EMULATORS=true npm run build:free`, start only `--only auth,firestore` emulators, serve `hosting/` on port 8081, then `E2E_FREE=1 npm run test:e2e:mobile`.
+
 ## Coverage map (what's proven)
 
 - **Auth & security:** registration and login, persistent session across reloads, password reset (client flow), user isolation (rules), non-admins refused, Firestore-written roles ignored, least-privilege roles, revoked tokens rejected, unknown admin actions rejected, secrets never returned or logged, audit trail.

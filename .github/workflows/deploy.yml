@@ -1,0 +1,119 @@
+name: Deploy (free Spark setup)
+
+# Publishes FORMA to Firebase using only no-cost Spark products:
+#   - Firestore Security Rules
+#   - Firebase Hosting: mobile web app at /, admin console at /admin
+# Cloud Functions, Secret Manager and Cloud Storage are NOT deployed (they need Blaze).
+#
+# One-time setup: add a repository secret named FIREBASE_SERVICE_ACCOUNT containing the
+# JSON key of a service account with the "Firebase Admin" role (see docs/DEPLOY_FREE.md).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HAS_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    steps:
+      - name: Skip when not configured
+        if: env.HAS_SERVICE_ACCOUNT != 'true'
+        run: echo "::notice title=Deploy skipped::Add the FIREBASE_SERVICE_ACCOUNT repository secret to enable deploys (docs/DEPLOY_FREE.md)."
+
+      - uses: actions/checkout@v4
+        if: env.HAS_SERVICE_ACCOUNT == 'true'
+      - uses: actions/setup-node@v4
+        if: env.HAS_SERVICE_ACCOUNT == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: env.HAS_SERVICE_ACCOUNT == 'true'
+        run: npm ci
+
+      - name: Authenticate
+        if: env.HAS_SERVICE_ACCOUNT == 'true'
+        env:
+          SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+          PROJECT_ID="${{ vars.FIREBASE_PROJECT_ID }}"
+          [ -n "$PROJECT_ID" ] || PROJECT_ID=$(jq -r .project_id "$RUNNER_TEMP/sa.json")
+          echo "PROJECT_ID=$PROJECT_ID" >> "$GITHUB_ENV"
+          echo "Deploying to project: $PROJECT_ID"
+
+      - name: Resolve public web config
+        if: env.HAS_SERVICE_ACCOUNT == 'true'
+        run: |
+          set -euo pipefail
+          APP_ID=$(npx firebase apps:list WEB --project "$PROJECT_ID" --json | jq -r '.result[0].appId // empty')
+          if [ -z "$APP_ID" ]; then
+            echo "No Web app registered yet; creating one (free)."
+            APP_ID=$(npx firebase apps:create WEB "FORMA Web" --project "$PROJECT_ID" --json | jq -r '.result.appId')
+          fi
+          npx firebase apps:sdkconfig WEB "$APP_ID" --project "$PROJECT_ID" -o "$RUNNER_TEMP/webconfig.json" --non-interactive
+          CONFIG=$(jq -c . "$RUNNER_TEMP/webconfig.json")
+          [ -n "$CONFIG" ] || { echo "::error::Could not read the Web app config"; exit 1; }
+          echo "Using Web app $APP_ID"
+          {
+            echo "EXPO_PUBLIC_FIREBASE_API_KEY=$(jq -r .apiKey <<<"$CONFIG")"
+            echo "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=$(jq -r .authDomain <<<"$CONFIG")"
+            echo "EXPO_PUBLIC_FIREBASE_PROJECT_ID=$(jq -r .projectId <<<"$CONFIG")"
+            echo "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=$(jq -r '.storageBucket // ""' <<<"$CONFIG")"
+            echo "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$(jq -r '.messagingSenderId // ""' <<<"$CONFIG")"
+            echo "EXPO_PUBLIC_FIREBASE_APP_ID=$(jq -r .appId <<<"$CONFIG")"
+            echo "NEXT_PUBLIC_FIREBASE_API_KEY=$(jq -r .apiKey <<<"$CONFIG")"
+            echo "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$(jq -r .authDomain <<<"$CONFIG")"
+            echo "NEXT_PUBLIC_FIREBASE_PROJECT_ID=$(jq -r .projectId <<<"$CONFIG")"
+            echo "NEXT_PUBLIC_FIREBASE_APP_ID=$(jq -r .appId <<<"$CONFIG")"
+          } >> "$GITHUB_ENV"
+
+      - name: Ensure Firestore database exists (free)
+        if: env.HAS_SERVICE_ACCOUNT == 'true'
+        continue-on-error: true
+        run: |
+          if npx firebase firestore:databases:list --project "$PROJECT_ID" --json | jq -e '.result[]? | select(.name | endswith("/(default)"))' >/dev/null; then
+            echo "Firestore database found."
+          else
+            npx firebase firestore:databases:create "(default)" --location "${{ vars.FIRESTORE_LOCATION || 'asia-south1' }}" --project "$PROJECT_ID"
+          fi
+
+      - name: Ensure a Hosting site exists (free)
+        if: env.HAS_SERVICE_ACCOUNT == 'true'
+        run: |
+          if npx firebase hosting:sites:list --project "$PROJECT_ID" --json | jq -e '(.result.sites // .result // []) | length > 0' >/dev/null; then
+            echo "Hosting site found."
+          else
+            npx firebase hosting:sites:create "$PROJECT_ID" --project "$PROJECT_ID" --non-interactive
+          fi
+
+      - name: Check, then build the free site
+        if: env.HAS_SERVICE_ACCOUNT == 'true'
+        env:
+          EXPO_PUBLIC_USE_EMULATORS: 'false'
+          NEXT_PUBLIC_USE_EMULATORS: 'false'
+          EXPO_PUBLIC_PRIVACY_URL: ${{ vars.PRIVACY_URL }}
+          EXPO_PUBLIC_TERMS_URL: ${{ vars.TERMS_URL }}
+        run: |
+          npm run check
+          npm run build:free
+
+      - name: Deploy rules and hosting
+        if: env.HAS_SERVICE_ACCOUNT == 'true'
+        run: npx firebase deploy --only firestore:rules,hosting --project "$PROJECT_ID" --non-interactive --force
+
+      - name: Summary
+        if: env.HAS_SERVICE_ACCOUNT == 'true'
+        run: |
+          echo "### FORMA deployed (free setup)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- App: https://$PROJECT_ID.web.app" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Admin notice: https://$PROJECT_ID.web.app/admin" >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$RUNNER_TEMP/sa.json"

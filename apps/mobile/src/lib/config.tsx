@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { FEATURES, type FeatureKey } from '@forma/shared';
+import { FEATURES, FEATURE_KEYS, type FeatureKey } from '@forma/shared';
+import { env } from './env';
 import { api, type MyConfig } from './api';
 import { useAuth } from './auth';
 
@@ -17,7 +18,24 @@ const Ctx = createContext<ConfigCtx>({ stale: false, refresh: async () => {} });
  * Loads server-evaluated features, plan and settings. The server enforces
  * everything; this is only for presentation (hiding switched-off features).
  */
+export const FREE_SETUP_AI_MESSAGE = 'AI features aren’t switched on for this free setup of FORMA. Everything else — plans, logging, nutrition, recovery and progress — works as normal.';
+
+/** Free (Spark) setup: no backend, so AI features are off and everything else uses registry defaults. */
+const FREE_CONFIG: MyConfig = {
+  features: Object.fromEntries(
+    FEATURE_KEYS.map((k) => [k, FEATURES[k].aiPowered ? { enabled: false, reason: 'flag_off', message: FREE_SETUP_AI_MESSAGE } : { enabled: FEATURES[k].defaultEnabled && k !== 'premiumFeatures', reason: 'on' }]),
+  ) as MyConfig['features'],
+  entitlement: { planId: 'free', planName: 'Free', status: 'active', billing: 'test_mode' },
+  ai: { usedToday: 0, usedThisMonth: 0, dailyLimit: 0, monthlyLimit: 0 },
+  settings: { maintenance: { active: false, message: '' }, defaultUnits: 'metric' },
+};
+
 export function ConfigProvider({ children }: { children: ReactNode }) {
+  if (!env.serverFeatures) return <Ctx.Provider value={{ config: FREE_CONFIG, stale: false, refresh: async () => {} }}>{children}</Ctx.Provider>;
+  return <ServerConfigProvider>{children}</ServerConfigProvider>;
+}
+
+function ServerConfigProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const key = user ? `forma:config:${user.uid}` : undefined;
   const [loaded, setLoaded] = useState<{ key: string; config: MyConfig }>();

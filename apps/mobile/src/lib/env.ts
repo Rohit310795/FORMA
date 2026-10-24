@@ -18,6 +18,14 @@ export const env = {
   googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '',
   googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '',
   googleAndroidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '',
+  /**
+   * 'off' = free (Firebase Spark) setup: no Cloud Functions, so AI, server
+   * feature flags and server-side export/deletion are replaced by safe
+   * client-side alternatives or a clear "not available" message.
+   */
+  serverFeatures: (process.env.EXPO_PUBLIC_SERVER_FEATURES ?? 'on') !== 'off',
+  /** 'off' when the project has no Cloud Storage bucket (Spark projects created after Oct 2024). */
+  storageEnabled: (process.env.EXPO_PUBLIC_STORAGE_ENABLED ?? 'on') !== 'off',
   privacyPolicyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL ?? '',
   termsUrl: process.env.EXPO_PUBLIC_TERMS_URL ?? '',
 };

@@ -47,14 +47,16 @@ service cloud.firestore {
       match /profile/{docId} {
         allow read: if isUser(uid);
         allow create, update: if isUser(uid) && docId == 'main' && validProfile();
-        allow delete: if false;
+        // Users may delete their own profile (account deletion on the free setup).
+        allow delete: if isUser(uid);
       }
 
       match /settings/{docId} {
         allow read: if isUser(uid);
-        allow write: if isUser(uid)
+        allow create, update: if isUser(uid)
           && docId in ['healthSync', 'notifications', 'nutritionTargets', 'musclePriorities']
           && data().keys().size() <= 40;
+        allow delete: if isUser(uid);
       }
 
       // Conversations are written only by the AI functions; users can read and delete them.

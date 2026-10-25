@@ -46,7 +46,22 @@ jobs:
           printf '%s' "$SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
           PROJECT_ID="${{ vars.FIREBASE_PROJECT_ID }}"
-          [ -n "$PROJECT_ID" ] || PROJECT_ID=$(jq -r .project_id "$RUNNER_TEMP/sa.json")
+          if [ -z "$PROJECT_ID" ]; then
+            KEY_PROJECT=$(jq -r .project_id "$RUNNER_TEMP/sa.json")
+            # The key's own project may not be the Firebase project; prefer a
+            # Firebase project this key can reach.
+            VISIBLE=$(GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json" npx firebase projects:list --json 2>/dev/null | jq -r '.result[]?.projectId' || true)
+            echo "Firebase projects this key can reach: ${VISIBLE:-none}"
+            if grep -qx "$KEY_PROJECT" <<<"$VISIBLE"; then
+              PROJECT_ID="$KEY_PROJECT"
+            else
+              PROJECT_ID=$(head -n1 <<<"$VISIBLE")
+            fi
+            if [ -z "$PROJECT_ID" ]; then
+              PROJECT_ID="$KEY_PROJECT"
+              echo "::warning::This key cannot see any Firebase project. In the Firebase project's Google Cloud IAM page, grant $(jq -r .client_email "$RUNNER_TEMP/sa.json") the Firebase Admin role."
+            fi
+          fi
           echo "PROJECT_ID=$PROJECT_ID" >> "$GITHUB_ENV"
           echo "Deploying to project: $PROJECT_ID"
 
